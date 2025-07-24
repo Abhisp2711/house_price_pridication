@@ -1,88 +1,90 @@
 import streamlit as st
 import numpy as np
-import pickle
+import pandas as pd
+from sklearn.linear_model import LinearRegression
 
-# Load model
-with open("models/house_price_model.pkl", "rb") as f:
-    model = pickle.load(f)
+# ----- Custom CSS -----
+custom_css = """
+<style>
+body {
+    background-color: #0f172a;
+    color: #f1f5f9;
+}
+h1, h2, h3 {
+    color: #38bdf8;
+}
+.stButton > button {
+    background-color: #2563eb;
+    color: white;
+    border-radius: 5px;
+    padding: 8px 16px;
+}
+</style>
+"""
+st.markdown(custom_css, unsafe_allow_html=True)
 
-# --- Page config ---
-st.set_page_config(page_title=" House Price Predictor", page_icon="", layout="centered")
+# ---- Title ----
+st.title("🏡 House Price Prediction (13 Features)")
+st.markdown("Enter the house details below:")
 
-# --- Custom CSS ---
-st.markdown("""
-    <style>
-        body {
-            background-color: black;
-        }
-        .stApp {
-            max-width: 800px;
-            margin: auto;
-            padding: 2rem;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #155DFC;
-            text-align: center;
-        }
-        .css-1v3fvcr {
-            background-color: #e0e7ff;
-        }
-        .css-2trqyj {
-            color: #333;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
-# --- Title & Description ---
-st.title(" Boston House Price Predictor")
-st.markdown("""
-Enter the property details below to estimate the **price of a house** in Boston using a machine learning model.  
-""")
-
-st.markdown("---")
-
-# --- Input Section ---
-st.header("📝 Property Features")
-
+# ---- Input Fields ----
 col1, col2 = st.columns(2)
 
 with col1:
-    CRIM = st.number_input("🔸 CRIM (Crime rate)", value=0.1)
-    ZN = st.number_input("🔸 ZN (Zoned land %)", value=0.0)
-    INDUS = st.number_input("🔸 INDUS (Industrial area %)", value=5.0)
-    CHAS = st.selectbox("🔸 CHAS (Near Charles River?)", [0, 1])
-    NOX = st.number_input("🔸 NOX (Nitric Oxides)", value=0.5)
-    RM = st.number_input("🔸 RM (Avg rooms per dwelling)", value=6.0)
-    AGE = st.number_input("🔸 AGE (% units built before 1940)", value=30.0)
+    area = st.number_input("Area (sq. ft):", min_value=300, max_value=10000, value=1500)
+    bedrooms = st.number_input("Bedrooms:", min_value=1, max_value=10, value=3)
+    bathrooms = st.number_input("Bathrooms:", min_value=1, max_value=10, value=2)
+    stories = st.number_input("Stories:", min_value=1, max_value=4, value=2)
+    parking = st.number_input("Parking Spaces:", min_value=0, max_value=5, value=1)
+    house_age = st.number_input("House Age (in years):", min_value=0, max_value=100, value=5)
+    furnished = st.selectbox("Furnishing Status:", ["Furnished", "Semi-furnished", "Unfurnished"])
 
 with col2:
-    DIS = st.number_input("🔹 DIS (Distance to employment centers)", value=5.0)
-    RAD = st.number_input("🔹 RAD (Highway access index)", value=1.0)
-    TAX = st.number_input("🔹 TAX (Property-tax rate)", value=300.0)
-    PTRATIO = st.number_input("🔹 PTRATIO (Pupil-teacher ratio)", value=15.0)
-    B = st.number_input("🔹 B (1000(Bk - 0.63)^2)", value=390.0)
-    LSTAT = st.number_input("🔹 LSTAT (% lower status)", value=12.0)
+    mainroad = st.selectbox("Main Road Access:", ["Yes", "No"])
+    guestroom = st.selectbox("Guest Room:", ["Yes", "No"])
+    basement = st.selectbox("Basement:", ["Yes", "No"])
+    hotwater = st.selectbox("Hot Water Heating:", ["Yes", "No"])
+    airconditioning = st.selectbox("Air Conditioning:", ["Yes", "No"])
+    prefarea = st.selectbox("Preferred Area:", ["Yes", "No"])
 
-# --- Prediction ---
-st.markdown("----")
+# ---- Encode categorical inputs ----
+def encode_yesno(val):
+    return 1 if val == "Yes" else 0
 
-if st.button("💰 Predict House Price"):
-    input_data = np.array([[CRIM, ZN, INDUS, CHAS, NOX, RM,
-                            AGE, DIS, RAD, TAX, PTRATIO, B, LSTAT]])
-    
-    price_usd = model.predict(input_data)[0] * 1000  # USD
-    price_inr = price_usd * 83  # Rough conversion to INR
+def encode_furnishing(val):
+    return {"Unfurnished": 0, "Semi-furnished": 1, "Furnished": 2}.get(val, 0)
 
-    st.success(f" Estimated House Price: ${price_usd:,.2f} USD")
-    st.info(f"🇮🇳 Equivalent in INR: ₹{price_inr:,.0f}")
+# ---- Create feature vector ----
+features = np.array([[
+    area,
+    bedrooms,
+    bathrooms,
+    stories,
+    encode_yesno(mainroad),
+    encode_yesno(guestroom),
+    encode_yesno(basement),
+    encode_yesno(hotwater),
+    encode_yesno(airconditioning),
+    parking,
+    encode_furnishing(furnished),
+    encode_yesno(prefarea),
+    house_age
+]])
 
+# ---- Dummy model for demonstration ----
+# Let's simulate with a simple model trained on random data
+np.random.seed(42)
+X_dummy = np.random.randint(0, 10, size=(100, 13))
+y_dummy = X_dummy @ np.array([10000, 15000, 20000, 12000, 5000, 8000, 7000, 9000, 10000, 4000, 6000, 5000, -1000]) + 50000
 
-# --- Footer ---
+model = LinearRegression()
+model.fit(X_dummy, y_dummy)
+
+# ---- Predict ----
+if st.button("🔍 Predict Price"):
+    price = model.predict(features)[0]
+    st.success(f"💰 **Estimated House Price: ₹{price:,.2f}**")
+
+# ---- Footer ----
 st.markdown("---")
-st.markdown(
-    "<center>Made with ❤️ using Streamlit & Scikit-Learn </center>",
-    unsafe_allow_html=True
-)
+st.markdown("*This model is for educational purposes. You can replace it with your trained model for real predictions.*")

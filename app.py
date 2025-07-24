@@ -12,7 +12,7 @@ st.set_page_config(page_title=" House Price Predictor", page_icon="", layout="ce
 # --- Custom CSS ---
 st.markdown("""
     <style>
-        .main {
+        body {
             background-color: black;
         }
         .stApp {
